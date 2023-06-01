@@ -2,7 +2,7 @@
 
 
 "calculates hydrogen output rates from alkaline electrolysis given electricity inputs"
-function alkaline(input::Vector{Float64}, efficiency::Float64=1, period::Float64=1.0)
+function alkaline(input::Vector{Float64}, efficiency::Float64=1.0, period::Float64=1.0)
     # working in kWh, kg and hours
     base = 55 # kWh/kg
     output = zeros(Float64, length(input))
@@ -22,22 +22,25 @@ function alk_output_v2(output_ratio::Vector{Float64}, power_range::Vector{Float6
     # working in kWh, kg and hours, want to return the rate of hydrogen output at each time step
     output = zeros(Float64, length(input))
     for i in 1:length(input)
-        output[i] = input[i] * interpolate(input[i], power_range[1], power_range[2], output_ratio[1], output_ratio[2]) # multiplies input in KW by efficiency in kg/kWh to get kg / h ratio
+        output[i] = input[i] / interpolate(input[i], power_range[1], power_range[2], output_ratio[1], output_ratio[2]) # multiplies input in KW by efficiency in kg/kWh to get kg / h ratio
     end
-    return output
+    return output # kg/h rate at each time step
 end
 
 
 
 alk_parameters = Dict(
-    "output_ratio" => [42.1, 48.8], # corresponding to capacity (stack) -> need to add additional ~10-20% for balance of plant
+    "output_ratio" => [42.1, 48.8], # kWh/kg corresponding to capacity (stack) -> need to add additional ~10-20% for balance of plant
     "power_range" => [0.15*48.8*1750,48.8*1750], # kW 
     "min_load" => 0.15, # minimum load as a fraction of capacity
     "max_output" => 1750, # kg / hour
 )
 
-inputs = [5.0,6.0,7.0,9.0,11.0] # as Float64
+inputs = [500.0,600.0,700.0,900.0,1100.0] # as Float64
+# convert inputs to Float64
 
-interpolate(40000.0, 0.15*48.8*1750, 48.8*1750, 42.1, 48.8)
 
-alk_output_v2(alk_parameters["output_ratio"], alk_parameters["power_range"], inputs)
+print("\n new \n")
+print(interpolate(40000.0, 0.15*48.8*1750, 48.8*1750, 42.1, 48.8))
+print("\n")
+print(alk_output_v2(alk_parameters["output_ratio"], alk_parameters["power_range"], inputs))
