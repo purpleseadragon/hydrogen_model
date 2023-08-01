@@ -60,13 +60,16 @@ if __name__ == "__main__":
     print("testing...")
     print(interpolate(10, 13, 5, 0,1))
 
-    # some default values (non-variable efficiency)
+    # some default values (non-variable efficiency) for a "large scale" PEM electrolysis system
     mass_conversion = 0.0889 # kg / Nm3
     efficiency = 4.5/mass_conversion # kWh/kg
     max_capacity =  10618/24*efficiency # kW
     min_capacity = max_capacity*0.1 # kW
 
-    print(efficiency)
-    
-    print(electrolysis_PEM(100, min_capacity, max_capacity, efficiency, efficiency))
+    print(f"efficiency: {efficiency:.2f} kWh/kg")
+    print(f"max capacity: {max_capacity:.2f} kW")
+
+    h2_production_rate = electrolysis_PEM(10000, min_capacity, max_capacity, efficiency, efficiency)
+    print(f"hydrogen production rate: {h2_production_rate:.2f} kg/h")
+
     exit(1)
