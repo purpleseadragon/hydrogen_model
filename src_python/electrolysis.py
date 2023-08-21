@@ -36,7 +36,7 @@ def electrolysis_PEM(input, min_capacity, max_capacity, min_efficiency, max_effi
     output = input/efficiency # kg/h 
     return output
 
-# electrolysis decreases in efficiency as capacity increases so we need to interpolate -> assuming linear relationship
+# electrolysis decreases in efficiency as capacity increases so we need to interpolate -> assuming linear relationship (may have to change)
 def interpolate(x, x1, x2, y1, y2):
     """
     Parameters
@@ -62,14 +62,15 @@ if __name__ == "__main__":
 
     # some default values (non-variable efficiency) for a "large scale" PEM electrolysis system
     mass_conversion = 0.0889 # kg / Nm3
-    efficiency = 4.5/mass_conversion # kWh/kg
-    max_capacity =  10618/24*efficiency # kW
+    max_efficiency = 4.5/mass_conversion # kWh/kg
+    min_efficiency = 5/mass_conversion # kWh/kg
+    max_capacity =  10618/24*min_efficiency # kW
     min_capacity = max_capacity*0.1 # kW
 
-    print(f"efficiency: {efficiency:.2f} kWh/kg")
+    print(f"efficiency: {min_efficiency:.2f} kWh/kg")
     print(f"max capacity: {max_capacity:.2f} kW")
 
-    h2_production_rate = electrolysis_PEM(10000, min_capacity, max_capacity, efficiency, efficiency)
+    h2_production_rate = electrolysis_PEM(10000, min_capacity, max_capacity, min_efficiency, max_efficiency)
     print(f"hydrogen production rate: {h2_production_rate:.2f} kg/h")
 
     exit(1)
