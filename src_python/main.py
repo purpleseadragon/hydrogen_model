@@ -9,22 +9,23 @@ output_file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\output_data_gen.xlsx"
 
 inputs = pd.read_excel(input_file_path)
 
-
-print(inputs.head())
-print(inputs.columns)
-print(inputs.index)
+# print(inputs.head())
+# print(inputs.columns)
+# print(inputs.index)
 
 headers = {
-    "sort": [], "time": [], "date": [], "h2_prod_rate": [],
+    "sort": [], "time": [], "date": [], "electrolyser_input": [], "h2_prod_rate": [],
     "battery_input": [], "battery_output": [], "battery_level": [], 
-    "purchase_rate": [], "sell_rate": []
+    "purchase_rate": [], "sell_rate": [], "cumulative_battery": [], "grid_price": [], "purchase_cost": [], "sell_cost": []
     }
 
 outputs = pd.DataFrame(headers)
 
+# constants -> consider changing to taking from JSON or similar method
+
 # for 1 January
-start_time = 120 # Jan 1, 10 am
-end_time = 3288 # Jan 12, 10 am
+start_time = 120 # Jan 1, 10 am -> only have data from here for wind
+end_time = 3288 # Jan 12, 10 am -> 12 day time period
 
 # set variables
 solar_panels = 1000 # rated capacity is 245 * number of panels kW
@@ -37,6 +38,8 @@ wind_price = 60 # $/MWh (refer to thesis)
 electrolysers = 80 # rated capacity is 1990 * number of electrolysers 
 electrolyser_capacity = 1990 # kW
 electrolyser_capacity_total = electrolysers*electrolyser_capacity # kW
+min_production = 48+7 # kWh / kg at max capacity (48 kWh/kg for stack + 7 kWh/kg for tertiary processes)
+max_production = 40+7 # kWh / kg at min capacity (40 kWh/kg for stack + 7 kWh/kg for tertiary processes)
 
 batteries = 10 # rated capacity is 3000 * number of batteries kWh
 battery_capacity = 3000 # kWh
@@ -45,39 +48,71 @@ battery_eff = 0.9 # 90% efficiency
 battery_max_time = 8 # hours
 #battery_charge_rate = 3000 # kW
 
-time_diff = 1/12 # hours
+time_step = 1/12 # hours
 
 # initial setup
 battery_level = 0
 
+# for max purchase price algorithm
+price_maximum = 50 # $/MWh
+electrolyser_min_capacity = 0.3 # fraction of max capacity -> dependent on type of electrolyser e.g. PEM, alkaline, etc.
+
 # working loop
-for i in range(start_time, end_time -start_time):
-    sort = inputs.loc[i,'sort']
-    time = inputs.loc[i,'time']
-    date = inputs.loc[i,'date']
+def working_loop(opt_alg, inputs=inputs, outputs=outputs, battery_level=battery_level):
+    """iterates through each timestep and calls the algorithm to determine the next timestep"""
+    for i in range(start_time, end_time-start_time):
+        sort = inputs.loc[i,'sort']
+        time = inputs.loc[i,'time']
+        date = inputs.loc[i,'date']
 
-    solar_output = inputs.loc[i,'solar_output']*solar_panels
-    wind_output = inputs.loc[i,'wind_output']*wind_turbines
-    grid_price = inputs.loc[i,'grid_price']
+        solar_output = inputs.loc[i,'solar_output']*solar_panels
+        wind_output = inputs.loc[i,'wind_output']*wind_turbines
+        grid_price = inputs.loc[i,'grid_price']
+        
+        # generates cumulative battery 
+        if len(outputs) > battery_max_time/time_step:
+            outputs['cumulative_battery'] = outputs['battery_input'].rolling(window=int(battery_max_time/time_step)).sum() - \
+                - outputs['battery_input']
+            cumulative_battery = outputs.loc[i-start_time-1,'cumulative_battery']
+        else:
+            outputs['cumulative_battery'] = 0
+            cumulative_battery = 0
 
-    new_row = trivial(sort, time, date, solar_output, wind_output, battery_level, time_diff, battery_capacity_total, battery_eff, electrolyser_capacity_total)
-    
-    outputs = pd.concat([outputs, pd.DataFrame(new_row, index=[0])], ignore_index=True)
+        # call algorithm
+        new_row = opt_alg(outputs, sort, time, date, solar_output, 
+                        wind_output, battery_level, time_step, 
+                        battery_capacity_total, battery_eff, battery_max_time,
+                        electrolyser_capacity_total, grid_price, cumulative_battery,
+                        price_maximum, electrolyser_min_capacity)
+        
+        outputs = pd.concat([outputs, pd.DataFrame(new_row, index=[0])], ignore_index=True)
 
-    battery_level = outputs.loc[i-start_time,'battery_level']
-    # get electrolysis capacity
+        battery_level = outputs.loc[i-start_time,'battery_level']
+    return outputs
 
-    # get battery storage capacity
+outputs = working_loop(trivial)
 
-    # assign production to electrolysis and battery storage
+# sum over the 12 days
+total_h2_produced = outputs['h2_prod_rate'].sum()*time_step
 
-    # choose amount of energy to purchase from grid
+outputs["purchase_cost"] = outputs["grid_price"] * outputs["purchase_rate"]*time_step
+outputs["sell_cost"] = outputs["grid_price"] * outputs["sell_rate"]*time_step
 
-    # record all data
 
-    # new_row = {...}
+# calculate total cost
+total_cost_purchased = outputs['purchase_cost'].sum()
+total_cost_sold = outputs['sell_cost'].sum()
 
-    # outputs.append(new_row, ignore_index=True)
+total_cost_solar = inputs['solar_output'][start_time:end_time].sum()*solar_price*time_step*solar_panels
+total_cost_wind = inputs['wind_output'][start_time:end_time].sum()*wind_price*time_step*wind_turbines
+
+print(f"total h2 produced: {total_h2_produced:,.2f} kg")
+print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
+print(f"total cost of sold electricity: ${total_cost_sold:,.2f}")
+print(f"total price solar: ${total_cost_solar:,.2f}")
+print(f"total price wind: ${total_cost_wind:,.2f}")
+
+
 
 
 outputs.to_excel(output_file_path, index=False) 
