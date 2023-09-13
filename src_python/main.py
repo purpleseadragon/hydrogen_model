@@ -14,9 +14,9 @@ inputs = pd.read_excel(input_file_path)
 # print(inputs.index)
 
 headers = {
-    "sort": [], "time": [], "date": [], "electrolyser_input": [], "h2_prod_rate": [],
-    "battery_input": [], "battery_output": [], "battery_level": [], 
-    "purchase_rate": [], "sell_rate": [], "cumulative_battery": [], "grid_price": [], "purchase_cost": [], "sell_cost": []
+    "sort": [], "time": [], "date": [], "solar_gen": [], "wind_gen": [],"electrolyser_input": [], 
+    "h2_prod_rate": [], "battery_input": [], "battery_output": [], "battery_level": [], "purchase_rate": [], 
+    "sell_rate": [], "cumulative_battery": [], "grid_price": [], "purchase_cost": [], "sell_cost": []
     }
 
 outputs = pd.DataFrame(headers)
@@ -28,18 +28,20 @@ start_time = 120 # Jan 1, 10 am -> only have data from here for wind
 end_time = 3288 # Jan 12, 10 am -> 12 day time period
 
 # set variables
-solar_panels = 1000 # rated capacity is 245 * number of panels kW
+solar_panels = 200000 # rated capacity is 245 * number of panels W
 solar_price = 50 # $/MWh (refer to thesis)
 
-wind_turbines = 80 # rated capacity is 3400 * number of turbines kW
+wind_turbines = 30 # rated capacity is 3400 * number of turbines kW
 wind_price = 60 # $/MWh (refer to thesis)
 
+# average houselod uses about 15 kWh per day -> 15/24 = 0.625 kW
+
 # assume PEM for now
-electrolysers = 80 # rated capacity is 1990 * number of electrolysers 
+electrolysers = 20 # rated capacity is 1990 * number of electrolysers 
 electrolyser_capacity = 1990 # kW
 electrolyser_capacity_total = electrolysers*electrolyser_capacity # kW
-min_production = 48+7 # kWh / kg at max capacity (48 kWh/kg for stack + 7 kWh/kg for tertiary processes)
-max_production = 40+7 # kWh / kg at min capacity (40 kWh/kg for stack + 7 kWh/kg for tertiary processes)
+min_production_eff = 48+7 # kWh / kg at max capacity (48 kWh/kg for stack + 7 kWh/kg for tertiary processes)
+max_production_eff = 40+7 # kWh / kg at min capacity (40 kWh/kg for stack + 7 kWh/kg for tertiary processes)
 
 batteries = 10 # rated capacity is 3000 * number of batteries kWh
 battery_capacity = 3000 # kWh
@@ -65,9 +67,9 @@ def working_loop(opt_alg, inputs=inputs, outputs=outputs, battery_level=battery_
         time = inputs.loc[i,'time']
         date = inputs.loc[i,'date']
 
-        solar_output = inputs.loc[i,'solar_output']*solar_panels
-        wind_output = inputs.loc[i,'wind_output']*wind_turbines
-        grid_price = inputs.loc[i,'grid_price']
+        solar_output = inputs.loc[i,'solar_output']*solar_panels*10**(-3) # W -> kW
+        wind_output = inputs.loc[i,'wind_output']*wind_turbines # W -> kW
+        grid_price = inputs.loc[i,'grid_price'] # $/MWh
         
         # generates cumulative battery 
         if len(outputs) > battery_max_time/time_step:
@@ -83,6 +85,7 @@ def working_loop(opt_alg, inputs=inputs, outputs=outputs, battery_level=battery_
                         wind_output, battery_level, time_step, 
                         battery_capacity_total, battery_eff, battery_max_time,
                         electrolyser_capacity_total, grid_price, cumulative_battery,
+                        min_production_eff, max_production_eff,
                         price_maximum, electrolyser_min_capacity)
         
         outputs = pd.concat([outputs, pd.DataFrame(new_row, index=[0])], ignore_index=True)
@@ -92,27 +95,28 @@ def working_loop(opt_alg, inputs=inputs, outputs=outputs, battery_level=battery_
 
 outputs = working_loop(trivial)
 
-# sum over the 12 days
-total_h2_produced = outputs['h2_prod_rate'].sum()*time_step
 
-outputs["purchase_cost"] = outputs["grid_price"] * outputs["purchase_rate"]*time_step
-outputs["sell_cost"] = outputs["grid_price"] * outputs["sell_rate"]*time_step
+# sum over the 12 days
+total_h2_produced = outputs['h2_prod_rate'].sum()*time_step # kg/h converted to kg/min and then taking into account time step
+
+outputs["purchase_cost"] = outputs["grid_price"] * outputs["purchase_rate"]*time_step*10**(-3) # $/MWh * kWh * ... -> $
+outputs["sell_cost"] = outputs["grid_price"] * outputs["sell_rate"]*time_step*10**(-3) # $/MWh * kWh * ... -> $
 
 
 # calculate total cost
 total_cost_purchased = outputs['purchase_cost'].sum()
 total_cost_sold = outputs['sell_cost'].sum()
 
-total_cost_solar = inputs['solar_output'][start_time:end_time].sum()*solar_price*time_step*solar_panels
-total_cost_wind = inputs['wind_output'][start_time:end_time].sum()*wind_price*time_step*wind_turbines
+total_cost_solar = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels*solar_price*10**(-6) # ... -> Wh * n * $/MWh * MWh/Wh -> $
+total_cost_wind = inputs['wind_output'][start_time:end_time].sum()*time_step*wind_turbines*wind_price*10**(-3) # ... -> kWh * n * $/MWh * MWh/Wh -> $
 
 print(f"total h2 produced: {total_h2_produced:,.2f} kg")
 print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
 print(f"total cost of sold electricity: ${total_cost_sold:,.2f}")
 print(f"total price solar: ${total_cost_solar:,.2f}")
-print(f"total price wind: ${total_cost_wind:,.2f}")
+print(f"total price wind: ${total_cost_wind:,.2f} ")
 
-
-
+# price per kg of H2
+print(f"price per kg of H2: ${(total_cost_purchased + total_cost_solar + total_cost_wind -total_cost_sold)/(total_h2_produced):,.2f} excl. of electrolyser, conversion, and battery costs")
 
 outputs.to_excel(output_file_path, index=False) 

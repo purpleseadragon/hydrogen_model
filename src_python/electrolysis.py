@@ -23,7 +23,7 @@ def electrolysis_PEM(input, min_capacity, max_capacity, min_efficiency, max_effi
 
     Returns
     -------
-    output : float -> output hydrogen in kg/s at the stack
+    output : float -> output hydrogen in kg/h at the stack
     """
     if input < min_capacity:
         print("input is less than minimum capacity")
