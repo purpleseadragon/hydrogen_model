@@ -16,7 +16,7 @@ inputs = pd.read_excel(input_file_path)
 headers = {
     "sort": [], "time": [], "date": [], "solar_gen": [], "wind_gen": [],"electrolyser_input": [], 
     "h2_prod_rate": [], "battery_input": [], "battery_output": [], "battery_level": [], "purchase_rate": [], 
-    "sell_rate": [], "cumulative_battery": [], "grid_price": [], "purchase_cost": [], "sell_cost": []
+    "sell_rate": [], "cumulative_battery": [], "grid_price": [], "purchase_cost": [], "sell_cost": [], "sell_net_price": []
     }
 
 outputs = pd.DataFrame(headers)
@@ -30,9 +30,11 @@ end_time = 3288 # Jan 12, 10 am -> 12 day time period
 # set variables
 solar_panels = 200000 # rated capacity is 245 * number of panels W
 solar_price = 50 # $/MWh (refer to thesis)
+ac_conversion_eff = 0.95 # 95% efficiency
 
 wind_turbines = 30 # rated capacity is 3400 * number of turbines kW
 wind_price = 60 # $/MWh (refer to thesis)
+dc_conversion_eff = 0.95 # 95% efficiency
 
 # average houselod uses about 15 kWh per day -> 15/24 = 0.625 kW
 
@@ -86,6 +88,7 @@ def working_loop(opt_alg, inputs=inputs, outputs=outputs, battery_level=battery_
                         battery_capacity_total, battery_eff, battery_max_time,
                         electrolyser_capacity_total, grid_price, cumulative_battery,
                         min_production_eff, max_production_eff,
+                        wind_price, solar_price,
                         price_maximum, electrolyser_min_capacity)
         
         outputs = pd.concat([outputs, pd.DataFrame(new_row, index=[0])], ignore_index=True)
@@ -100,7 +103,7 @@ outputs = working_loop(trivial)
 total_h2_produced = outputs['h2_prod_rate'].sum()*time_step # kg/h converted to kg/min and then taking into account time step
 
 outputs["purchase_cost"] = outputs["grid_price"] * outputs["purchase_rate"]*time_step*10**(-3) # $/MWh * kWh * ... -> $
-outputs["sell_cost"] = outputs["grid_price"] * outputs["sell_rate"]*time_step*10**(-3) # $/MWh * kWh * ... -> $
+outputs["sell_net_price"] = outputs["grid_price"] * outputs["sell_rate"]*time_step*10**(-3) - outputs["sell_cost"]*outputs["sell_rate"] # $/MWh * kWh * ... -> $ # takes difference between cost of electricity and price sold for 
 
 
 # calculate total cost
@@ -110,9 +113,9 @@ total_cost_sold = outputs['sell_cost'].sum()
 total_cost_solar = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels*solar_price*10**(-6) # ... -> Wh * n * $/MWh * MWh/Wh -> $
 total_cost_wind = inputs['wind_output'][start_time:end_time].sum()*time_step*wind_turbines*wind_price*10**(-3) # ... -> kWh * n * $/MWh * MWh/Wh -> $
 
-print(f"total h2 produced: {total_h2_produced:,.2f} kg")
+print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hour")
 print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
-print(f"total cost of sold electricity: ${total_cost_sold:,.2f}")
+print(f"net profit from sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
 print(f"total price solar: ${total_cost_solar:,.2f}")
 print(f"total price wind: ${total_cost_wind:,.2f} ")
 

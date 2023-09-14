@@ -1,5 +1,5 @@
 # ...
-
+from helper import generate_sell_cost
 from electrolysis import electrolysis_PEM
 
 def trivial(outputs, sort, time, date, 
@@ -7,21 +7,23 @@ def trivial(outputs, sort, time, date,
             time_diff, battery_capacity_total, battery_eff, battery_max_time,
             electrolyser_capacity_total, grid_price, cumulative_battery,
             min_production_eff, max_production_eff,
+            wind_price, solar_price,
             price_maximum, electrolyser_min_capacity):
     """The trivial algorithm attempts to maintain electrolysis production at 100%  capacity by any means possible."""
     # (1) inefficient algorithm 
     sell_rate = 0
     battery_output = 0
+    sell_cost = 0
 
     electrolyser_input = electrolyser_capacity_total
 
     h2_prod_rate = electrolysis_PEM(electrolyser_input, 0.1*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
 
     # if wind and solar are greater than electrolyser capacity, then excess goes to battery
-    # if more than 8 time periods also need to do balancing to make sure battery outputs are >= battery inputs over last n (8) hours
     battery_input = max(min(wind_output + solar_output - electrolyser_input,(battery_capacity_total - battery_level)/time_diff), 0)
 
     # if wind + solar < electrolyser_input, then use battery to make up the difference
+    # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
     if len(outputs) > battery_max_time/time_diff and wind_output + solar_output < electrolyser_input:
         battery_output = max(min((electrolyser_input - wind_output - solar_output)/battery_eff, battery_level / time_diff*battery_eff), max(battery_level/time_diff - cumulative_battery,0))
     
@@ -32,8 +34,9 @@ def trivial(outputs, sort, time, date,
         battery_output = min((electrolyser_input - wind_output - solar_output)/battery_eff , battery_level / time_diff* battery_eff)
 
     # if wind + solar > battery_input + electrolyser_input, then sell excess
-    if battery_input < wind_output + solar_output - electrolyser_input:
+    if battery_input - battery_output < wind_output + solar_output - electrolyser_input:
         sell_rate = wind_output + solar_output - electrolyser_input - battery_input + battery_output
+        sell_cost = generate_sell_cost(sell_rate, solar_output, wind_price, solar_price)
 
     # if wind + solar < electrolyser_input, then purchase from grid to make up the difference
     purchase_rate = max(electrolyser_input - wind_output - solar_output - battery_output, 0)
@@ -43,7 +46,7 @@ def trivial(outputs, sort, time, date,
     new_row = {
         "sort": sort, "time": time, "date": date, "electrolyser_input": electrolyser_input, "solar_gen": solar_output, 
         "wind_gen": wind_output,"h2_prod_rate": h2_prod_rate, "battery_input": battery_input, "battery_output": battery_output, 
-        "battery_level": battery_level, "purchase_rate": purchase_rate, "sell_rate": sell_rate, "grid_price": grid_price
+        "battery_level": battery_level, "purchase_rate": purchase_rate, "grid_price": grid_price, "sell_rate": sell_rate, "sell_cost": sell_cost
         }
     
     return new_row
@@ -54,6 +57,7 @@ def max_purchase_price(outputs, sort, time, date,
             time_diff, battery_capacity_total, battery_eff, battery_max_time,
             electrolyser_capacity_total, grid_price, cumulative_battery,
             min_production_eff, max_production_eff,
+            wind_price, solar_price,
             price_maximum, electrolyser_min_capacity):
     # this algorithm only purchases hydrogen if it is cheaper a price maximum
     # up to some minimum capacity
