@@ -19,16 +19,16 @@ tilt = 38 # degrees (standard)
 
 file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\solar_data.xlsx"
 
-df = pd.read_excel(file_path, sheet_name='vertical axis')
+df = pd.read_excel(file_path, sheet_name='dual axis')
 
 #energy cut off column represents the energy produced by a single panel with ~ 1.5 m2 of area and vertical axis configuration
 def plot_average_energy_per_day(df):
-    sum_by_time_of_day = df.groupby('HH24')['Energy Cut Off (MWh)'].sum()
+    sum_by_time_of_day = df.groupby('HH24')['Energy cut off (MWh)'].sum()
     xs = [k for k in sum_by_time_of_day.keys()]
     ys = [sum_by_time_of_day[k] for k in sum_by_time_of_day.keys()]
     plt.plot(xs, ys)
-    plt.xlabel('day')
-    plt.ylabel('energy cut off (kWh)')
+    plt.xlabel('time of day')
+    plt.ylabel('scaled power generation')
     plt.show()
 
 # Filter by Month and day
@@ -42,11 +42,11 @@ if __name__ == "__main__":
     # print(df.loc[30,'SS'])
     # print(df.iloc[2,1])
     installed_capacity = 1000 # kW
-    sum_by_time_of_day = df.groupby('HH24')['Energy Cut Off (MWh)'].sum()
+    #sum_by_time_of_day = df.groupby('HH24')['Energy Cut Off (MWh)'].sum()
 
-    print(type(sum_by_time_of_day))
-    print(sum_by_time_of_day.head())
-    print(sum_by_time_of_day[0.0])
+    # print(type(sum_by_time_of_day))
+    # print(sum_by_time_of_day.head())
+    # print(sum_by_time_of_day[0.0])
 
     plot_average_energy_per_day(df)
     

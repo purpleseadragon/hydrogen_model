@@ -28,13 +28,16 @@ start_time = 120 # Jan 1, 10 am -> only have data from here for wind
 end_time = 3288 # Jan 12, 10 am -> 12 day time period
 
 # set variables
-solar_panels = 200000 # rated capacity is 245 * number of panels W
+solar_panels = 100000 # rated capacity is 245 * number of panels W
 solar_price = 50 # $/MWh (refer to thesis)
 ac_conversion_eff = 0.95 # 95% efficiency
+print(f"total installed solar is {solar_panels*575e-6:,.2f} MW")
 
-wind_turbines = 30 # rated capacity is 3400 * number of turbines kW
+wind_turbines = 25 # rated capacity is 3400 * number of turbines kW
 wind_price = 60 # $/MWh (refer to thesis)
 dc_conversion_eff = 0.95 # 95% efficiency
+
+print(f"total installed wind is {wind_turbines*3.4:,.2f} MW")
 
 # average houselod uses about 15 kWh per day -> 15/24 = 0.625 kW
 
@@ -44,6 +47,7 @@ electrolyser_capacity = 1990 # kW
 electrolyser_capacity_total = electrolysers*electrolyser_capacity # kW
 min_production_eff = 48+7 # kWh / kg at max capacity (48 kWh/kg for stack + 7 kWh/kg for tertiary processes)
 max_production_eff = 40+7 # kWh / kg at min capacity (40 kWh/kg for stack + 7 kWh/kg for tertiary processes)
+print(f"total installed electrolyser capaccity is {electrolyser_capacity_total*1e-3:,.2f} MW")
 
 batteries = 10 # rated capacity is 3000 * number of batteries kWh
 battery_capacity = 3000 # kWh
@@ -51,6 +55,7 @@ battery_capacity_total = batteries*battery_capacity # kWh
 battery_eff = 0.9 # 90% efficiency
 battery_max_time = 8 # hours
 #battery_charge_rate = 3000 # kW
+print(f"total installed battery capacity is {battery_capacity_total*1e-3:,.2f} MWh")
 
 time_step = 1/12 # hours
 
@@ -113,7 +118,8 @@ total_cost_sold = outputs['sell_cost'].sum()
 total_cost_solar = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels*solar_price*10**(-6) # ... -> Wh * n * $/MWh * MWh/Wh -> $
 total_cost_wind = inputs['wind_output'][start_time:end_time].sum()*time_step*wind_turbines*wind_price*10**(-3) # ... -> kWh * n * $/MWh * MWh/Wh -> $
 
-print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hour")
+print("")
+print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr")
 print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
 print(f"net profit from sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
 print(f"total price solar: ${total_cost_solar:,.2f}")
