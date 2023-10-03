@@ -28,7 +28,7 @@ def electrolysis_PEM(input, min_capacity, max_capacity, min_efficiency, max_effi
     if input < min_capacity:
         print("input is less than minimum capacity")
         return 0
-    if input > max_capacity:
+    if input > max_capacity*1.01:
         print("input is greater than maximum capacity")
         return 0
     
