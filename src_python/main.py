@@ -59,7 +59,7 @@ battery_capacity = 3000 # kWh
 battery_capacity_total = batteries*battery_capacity # kWh
 battery_eff = 0.9 # 90% efficiency
 battery_max_time = 8 # hours
-battery_max_charge_rate = 3000 # kW
+battery_max_charge_rate = 3000*batteries # kW
 battery_cost_per_kwh_2023 = 485 # $/kWh
 battery_ul = 20 # years
 print(f"total installed battery capacity is {battery_capacity_total*1e-3:,.2f} MWh")
@@ -146,35 +146,32 @@ if __name__ == "__main__":
     state_2 = 'sa'
     wind_loc_1 = '1'
     wind_loc_2 = '2'
-    start_time = 126 # Jan 1, 10:30 am -> only have data from here for wind
+    start_time = 132 # Jan 1, 10:30 am -> only have data from here for wind
     end_time = 3288 # Jan 12, 10:30 am -> 12 day time period
 
-    print("\nusing trivial algorithm, QLD prices, wind location 1 \n")
-    main(trivial, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+    # output to different files
 
-    print("\nusing max purchase price algorithm, SA prices, wind location 2 \n")
-    main(max_purchase_price, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    print("\nusing trivial algorithm, SA prices, wind location 1 \n")
-    main(trivial, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
+    # print("\nusing trivial algorithm, QLD prices, wind location 1 \n")
+    # main(trivial, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    print("\nusing max purchase price algorithm, SA prices, wind location 1 \n")
-    main(max_purchase_price, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
+    # print("\nusing max purchase price algorithm, QLD prices, wind location 1 \n")
+    # main(max_purchase_price, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    print("\nusing trivial algorithm, QLD prices, wind location 2 \n")
-    main(trivial, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
+    # print("\nusing trivial algorithm, SA prices, wind location 1 \n")
+    # main(trivial, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
 
-    print("\nusing max purchase price algorithm, QLD prices, wind location 2 \n")
-    main(max_purchase_price, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
+    # print("\nusing max purchase price algorithm, SA prices, wind location 1 \n")
+    # main(max_purchase_price, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
 
-    print("\nusing trivial algorithm, SA prices, wind location 2 \n")
-    main(trivial, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
+    # print("\nusing trivial algorithm, QLD prices, wind location 2 \n")
+    # main(trivial, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
+
+    # print("\nusing max purchase price algorithm, QLD prices, wind location 2 \n")
+    # main(max_purchase_price, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
+
+    # print("\nusing trivial algorithm, SA prices, wind location 2 \n")
+    # main(trivial, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
 
     print("\nusing max purchase price algorithm, SA prices, wind location 2 \n")
     main(max_purchase_price, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
-
-    
-
-
-
-

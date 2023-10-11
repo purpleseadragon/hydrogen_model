@@ -20,7 +20,7 @@ def trivial(outputs, sort, time, date,
     h2_prod_rate = electrolysis_PEM(electrolyser_input, 0.1*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
 
     # if wind and solar are greater than electrolyser capacity, then excess goes to battery
-    battery_input = max(min(wind_output + solar_output - electrolyser_input,(battery_capacity_total - battery_level)/time_diff), 0)
+    battery_input = max(min(wind_output + solar_output - electrolyser_input,(battery_capacity_total - battery_level)/time_diff), 0)*battery_eff
 
     # if wind + solar < electrolyser_input, then use battery to make up the difference
     # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
@@ -31,7 +31,7 @@ def trivial(outputs, sort, time, date,
         battery_output = max(battery_level/time_diff - cumulative_battery,0)
 
     elif wind_output + solar_output < electrolyser_input:
-        battery_output = min((electrolyser_input - wind_output - solar_output)/battery_eff , battery_level / time_diff* battery_eff)
+        battery_output = min((electrolyser_input - wind_output - solar_output)/battery_eff , battery_level / time_diff* battery_eff, battery_max_charge_rate)
 
     # if wind + solar > battery_input + electrolyser_input, then sell excess
     if battery_input - battery_output < wind_output + solar_output - electrolyser_input:
@@ -68,35 +68,33 @@ def max_purchase_price(outputs, sort, time, date,
     sell_cost = 0
     purchase_rate = 0
 
-    # battery input is excess wind and solar if applicable -> considering also purchasing electricity if cheap enough
-    if wind_output + solar_output > electrolyser_capacity_total:
-        battery_input = max(min(wind_output + solar_output - electrolyser_capacity_total,(battery_capacity_total - battery_level)/time_diff, battery_max_charge_rate), 0)
-    
     # purchase as much energy as possible if price is below price maximum
     if grid_price < price_maximum*battery_eff:
         electrolyser_input = electrolyser_capacity_total
         battery_input = min((battery_capacity_total - battery_level)/time_diff, battery_max_charge_rate)
-        purchase_rate = max(battery_input + electrolyser_capacity_total - wind_output - solar_output, 0)
+        # purchase rate is amount required to get max battery input + electrolyser capacity
+        purchase_rate = max(battery_input/battery_eff + electrolyser_capacity_total - wind_output - solar_output, 0)
 
     # if price is less than maximum but not sufficiently low to purchase for battery purchase only enough to meet max electrolyser capacity
     elif grid_price < price_maximum:
         electrolyser_input = electrolyser_capacity_total
         purchase_rate = max(electrolyser_capacity_total - wind_output - solar_output, 0)
+        # if wind + solar < electrolyser_input, then use battery to make up the difference
 
+    elif grid_price > price_maximum and wind_output + solar_output < electrolyser_capacity_total:
+        battery_output = min((electrolyser_capacity_total - wind_output - solar_output), battery_level / time_diff, battery_max_charge_rate)
 
-    # if wind + solar < electrolyser_input, then use battery to make up the difference
-    if wind_output + solar_output < electrolyser_capacity_total:
-        battery_output = min((electrolyser_capacity_total - wind_output - solar_output)/battery_eff , battery_level / time_diff * battery_eff, battery_max_charge_rate * time_diff * battery_eff)
+    elif grid_price > price_maximum and wind_output + solar_output >= electrolyser_capacity_total:
+        battery_input = max(min((wind_output + solar_output)*battery_eff - electrolyser_capacity_total,(battery_capacity_total - battery_level)/time_diff, battery_max_charge_rate), 0)
 
     # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
     if len(outputs) > battery_max_time/time_diff:
         battery_output = max(battery_level/time_diff - cumulative_battery, battery_output)
 
-
     battery_level = round(battery_level + battery_input * time_diff - battery_output * time_diff,2)
 
     # if wind + solar > battery_input + electrolyser_input, then sell excess
-    if battery_input - battery_output < wind_output + solar_output - electrolyser_capacity_total:
+    if battery_output + wind_output + solar_output + purchase_rate < electrolyser_capacity_total + battery_input:
         sell_rate = wind_output + solar_output - electrolyser_capacity_total - battery_input + battery_output
         sell_cost = generate_sell_cost(sell_rate, solar_output, wind_price, solar_price)
 
@@ -117,3 +115,13 @@ def max_purchase_price(outputs, sort, time, date,
         }
     
     return new_row
+
+
+def buy_and_sell(outputs, sort, time, date, 
+            solar_output, wind_output, battery_level, 
+            time_diff, battery_capacity_total, battery_max_charge_rate, battery_eff, 
+            battery_max_time, electrolyser_capacity_total, grid_price, cumulative_battery,
+            min_production_eff, max_production_eff,
+            wind_price, solar_price,
+            price_maximum, electrolyser_min_capacity):
+    pass
