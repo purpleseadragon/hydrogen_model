@@ -34,13 +34,15 @@ time_step = 1/12 # hours
 solar_panels = 100000 # rated capacity is 575 * number of panels W
 solar_price = 65 # $/MWh (gencost 2022 low end)
 ac_conversion_eff = 0.95 # 95% efficiency
-print(f"total installed solar is {solar_panels*575e-6:,.2f} MW")
+solar_panel_rated = 575e-6 # MW
+print(f"total installed solar is {solar_panels*solar_panel_rated:,.2f} MW")
 
 wind_turbines = 25 # rated capacity is 3400 * number of turbines kW
+wind_turbines_rated = 3.4 # MW
 wind_price = 75 # $/MWh (gencost 2022 low end)
 dc_conversion_eff = 0.95 # 95% efficiency
 
-print(f"total installed wind is {wind_turbines*3.4:,.2f} MW")
+print(f"total installed wind is {wind_turbines*wind_turbines_rated:,.2f} MW")
 
 # average houselod uses about 15 kWh per day -> 15/24 = 0.625 kW
 
@@ -129,17 +131,18 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
     total_cost_battery = battery_capacity_total*battery_cost_per_kwh_2023 * (end_time - start_time) / (battery_ul*365*24*12)
     total_cost_electrolyser = electrolyser_capacity_total*electrolyser_cost_per_kw_2023 * (end_time - start_time) / (electrolyser_ul*365*24*12)
     
-    print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr")
+    print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr, capacity factor:  \
+          {total_h2_produced/(end_time-start_time)/time_step/electrolysis_PEM(electrolyser_capacity_total, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff):,.2f}")
     print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
     print(f"net profit from sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
-    print(f"total price solar: ${total_cost_solar:,.2f}")
-    print(f"total price wind: ${total_cost_wind:,.2f} ")
+    print(f"total price solar: ${total_cost_solar:,.2f}, solar capacity factor: {total_h2_produced/(end_time-start_time)/time_step/solar_panels/solar_panel_rated:,.2f}")
+    print(f"total price wind: ${total_cost_wind:,.2f}, wind capacity factor: {total_h2_produced/(end_time-start_time)/time_step/wind_turbines/wind_turbines_rated:,.2f}")
     print(f"cost of batteries over the time period: ${total_cost_battery:,.2f}")
     print(f"cost of electrolysers over the time period: ${total_cost_electrolyser:,.2f}")
     print(f"total kWh purchased from grid: {outputs['purchase_rate'].sum()*time_step:,.2f} kWh")
     print(f"total kWh sold to grid: {outputs['sell_rate'].sum()*time_step:,.2f} kWh")
-    print(f"total kWh put into system: {outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['sell_rate'].sum()*time_step:,.2f } kWh")
-    print(f"total kWh taken from system: {outputs['electrolyser_input'].sum()*time_step +outputs['purchase_rate'].sum()*time_step:,.2f } kWh")
+    print(f"total kWh put into system: {(outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['purchase_rate'].sum()*time_step):,.2f} kWh")
+    print(f"total kWh taken from system: {(outputs['electrolyser_input'].sum()*time_step +outputs['sell_rate'].sum()*time_step):,.2f} kWh")
     print(f"total kWh stored in batteries: {outputs['battery_input'].sum()*time_step:,.2f} kWh")
     print(f"total kWh taken from batteries: {outputs['battery_output'].sum()*time_step:,.2f} kWh")
                                                      
@@ -155,8 +158,8 @@ if __name__ == "__main__":
     state_2 = 'sa'
     wind_loc_1 = '1'
     wind_loc_2 = '2'
-    start_time = 132 # Jan 1, 10:30 am -> only have data from here for wind
-    end_time = 3288 # Jan 12, 10:30 am -> 12 day time period
+    start_time = 132 # Jan 1, 11 am -> only have data from here for wind
+    end_time = 3288 # 3288 is Jan 12, 10:30 am -> 12 day time period
 
     # output to different files
 
@@ -164,11 +167,11 @@ if __name__ == "__main__":
     print("\nusing algorithm_1, QLD prices, wind location 1 \n")
     main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    print("\nusing algorithm_2, QLD prices, wind location 1 \n")
-    main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+    # print("\nusing algorithm_2, QLD prices, wind location 1 \n")
+    # main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    print("\nusing algorithm_3 QLD prices, wind location 1 \n")
-    main(algorithm_3, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+    # print("\nusing algorithm_3 QLD prices, wind location 1 \n")
+    # main(algorithm_3, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
     # print("\nusing algorithm_2, SA prices, wind location 1 \n")
     # main(algorithm_2, inputs, outputs, start_time, end_time, state_2, wind_loc_1)

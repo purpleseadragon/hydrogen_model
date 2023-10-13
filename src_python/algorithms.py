@@ -20,23 +20,25 @@ def algorithm_1(outputs, sort, time, date,
     h2_prod_rate = electrolysis_PEM(electrolyser_input, 0.1*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
 
     # if wind and solar are greater than electrolyser capacity, then excess goes to battery
-    battery_input = max(min(wind_output + solar_output - electrolyser_input,(battery_capacity_total - battery_level)/time_diff), 0)*battery_eff
+    battery_input = max(min((wind_output + solar_output - electrolyser_input)*battery_eff,(battery_capacity_total - battery_level)/time_diff), 0)
+
+    # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
+    if len(outputs) > battery_max_time/time_diff:
+        battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
 
     # if wind + solar < electrolyser_input, then use battery to make up the difference
-    # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
-    if len(outputs) > battery_max_time/time_diff and wind_output + solar_output < electrolyser_input:
-        battery_output = max(min((electrolyser_input - wind_output - solar_output)/battery_eff, battery_level / time_diff*battery_eff), max(battery_level/time_diff - cumulative_battery,0))
+    # if len(outputs) > battery_max_time/time_diff and wind_output + solar_output < electrolyser_input:
+    #     battery_output = max(min((electrolyser_input - wind_output - solar_output)/battery_eff, battery_level / time_diff*battery_eff), max(battery_level/time_diff - cumulative_battery,0))
     
-    elif len(outputs) > battery_max_time/time_diff:
-        battery_output = max(battery_level/time_diff - cumulative_battery,0)
+    # elif len(outputs) > battery_max_time/time_diff:
+    #     battery_output = max(battery_level/time_diff - cumulative_battery,0)
 
-    elif wind_output + solar_output < electrolyser_input:
-        battery_output = min((electrolyser_input - wind_output - solar_output)/battery_eff , battery_level / time_diff* battery_eff, battery_max_charge_rate)
+    if wind_output + solar_output < electrolyser_input:
+        battery_output = min((electrolyser_input - wind_output - solar_output), battery_level / time_diff, battery_max_charge_rate, battery_output)
 
     # if wind + solar > battery_input + electrolyser_input, then sell excess
     if battery_input - battery_output < wind_output + solar_output - electrolyser_input:
         sell_rate = wind_output + solar_output - electrolyser_input - battery_input + battery_output
-        sell_cost = generate_sell_cost(sell_rate, solar_output, wind_price, solar_price)
 
     # if wind + solar < electrolyser_input, then purchase from grid to make up the difference
     purchase_rate = max(electrolyser_input - wind_output - solar_output - battery_output, 0)
@@ -48,6 +50,8 @@ def algorithm_1(outputs, sort, time, date,
         "wind_gen": wind_output,"h2_prod_rate": h2_prod_rate, "battery_input": battery_input, "battery_output": battery_output, 
         "battery_level": battery_level, "purchase_rate": purchase_rate, "grid_price": grid_price, "sell_rate": sell_rate, "sell_cost": sell_cost
         }
+    
+    sell_cost = sell_rate*grid_price*time_diff*10**(-3)
     
     return new_row
 
@@ -102,7 +106,8 @@ def algorithm_2(outputs, sort, time, date,
     # if wind + solar + battery_output   > battery_input + electrolyser_input, then sell excess
     if battery_output + wind_output + solar_output + purchase_rate > electrolyser_capacity_total + battery_input_raw:
         sell_rate = max(wind_output + solar_output - electrolyser_capacity_total - battery_input_raw + battery_output, 0)
-        sell_cost = generate_sell_cost(sell_rate, solar_output, wind_price, solar_price)
+        # sell_cost = generate_sell_cost(sell_rate, solar_output, wind_price, solar_price)
+        
 
     # balance 
     electrolyser_input = purchase_rate + wind_output + solar_output + battery_output - battery_input_raw - sell_rate
@@ -121,6 +126,8 @@ def algorithm_2(outputs, sort, time, date,
             sell_rate -= purchase_rate
             purchase_rate = 0
 
+    sell_cost = sell_rate*grid_price*time_diff*10**(-3)
+    
     new_row = {
         "sort": sort, "time": time, "date": date, "electrolyser_input": electrolyser_input, "solar_gen": solar_output, 
         "wind_gen": wind_output,"h2_prod_rate": h2_prod_rate, "battery_input": battery_input, "battery_output": battery_output, 
@@ -205,6 +212,8 @@ def algorithm_3(outputs, sort, time, date,
         else:
             sell_rate -= purchase_rate
             purchase_rate = 0
+    
+    sell_cost = sell_rate*grid_price*time_diff*10**(-3)
         
     new_row = {
         "sort": sort, "time": time, "date": date, "electrolyser_input": electrolyser_input, "solar_gen": solar_output, 
