@@ -64,8 +64,10 @@ battery_cost_per_kwh_2023 = 485 # $/kWh
 battery_ul = 20 # years
 print(f"total installed battery capacity is {battery_capacity_total*1e-3:,.2f} MWh")
 
- # for max purchase price algorithm
-price_maximum = 20 # $/MWh
+ # for algorithm_2 algorithm
+price_buy_maximum = 40 # $/MWh
+price_sell_minimum = 100 # $/MWh
+
 electrolyser_min_capacity = 0.3 # fraction of max capacity -> dependent on type of electrolyser e.g. PEM, alkaline, etc.
 
 def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
@@ -85,7 +87,7 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
             
             # generates cumulative battery 
             if len(outputs) > battery_max_time/time_step:
-                outputs['cumulative_battery'] = outputs['battery_input'].rolling(window=int(battery_max_time/time_step)).sum() - \
+                outputs['cumulative_battery'] = outputs['battery_input'].rolling(window=int(battery_max_time/time_step)).sum() \
                     - outputs['battery_input']
                 cumulative_battery = outputs.loc[i-start_time-1,'cumulative_battery']
             else:
@@ -98,8 +100,8 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
                             battery_capacity_total, battery_max_charge_rate, battery_eff, battery_max_time,
                             electrolyser_capacity_total, grid_price, cumulative_battery,
                             min_production_eff, max_production_eff,
-                            wind_price, solar_price,
-                            price_maximum, electrolyser_min_capacity)
+                            wind_price, solar_price, price_sell_minimum,
+                            price_buy_maximum, electrolyser_min_capacity)
             
             outputs = pd.concat([outputs, pd.DataFrame(new_row, index=[0])], ignore_index=True)
 
@@ -126,7 +128,7 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
 
     total_cost_battery = battery_capacity_total*battery_cost_per_kwh_2023 * (end_time - start_time) / (battery_ul*365*24*12)
     total_cost_electrolyser = electrolyser_capacity_total*electrolyser_cost_per_kw_2023 * (end_time - start_time) / (electrolyser_ul*365*24*12)
-    print("")
+    
     print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr")
     print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
     print(f"net profit from sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
@@ -134,6 +136,13 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
     print(f"total price wind: ${total_cost_wind:,.2f} ")
     print(f"cost of batteries over the time period: ${total_cost_battery:,.2f}")
     print(f"cost of electrolysers over the time period: ${total_cost_electrolyser:,.2f}")
+    print(f"total kWh purchased from grid: {outputs['purchase_rate'].sum()*time_step:,.2f} kWh")
+    print(f"total kWh sold to grid: {outputs['sell_rate'].sum()*time_step:,.2f} kWh")
+    print(f"total kWh put into system: {outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['sell_rate'].sum()*time_step:,.2f } kWh")
+    print(f"total kWh taken from system: {outputs['electrolyser_input'].sum()*time_step +outputs['purchase_rate'].sum()*time_step:,.2f } kWh")
+    print(f"total kWh stored in batteries: {outputs['battery_input'].sum()*time_step:,.2f} kWh")
+    print(f"total kWh taken from batteries: {outputs['battery_output'].sum()*time_step:,.2f} kWh")
+                                                     
 
     # price per kg of H2
     print(f"price per kg of H2: ${(total_cost_purchased + total_cost_solar + total_cost_wind + total_cost_battery + total_cost_electrolyser-total_cost_sold)/(total_h2_produced):,.2f} excl. of electrolyser, conversion, and battery costs")
@@ -152,26 +161,26 @@ if __name__ == "__main__":
     # output to different files
 
 
-    # print("\nusing trivial algorithm, QLD prices, wind location 1 \n")
-    # main(trivial, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+    print("\nusing algorithm_1, QLD prices, wind location 1 \n")
+    main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    # print("\nusing max purchase price algorithm, QLD prices, wind location 1 \n")
-    # main(max_purchase_price, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+    print("\nusing algorithm_2, QLD prices, wind location 1 \n")
+    main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    # print("\nusing trivial algorithm, SA prices, wind location 1 \n")
-    # main(trivial, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
+    print("\nusing algorithm_3 QLD prices, wind location 1 \n")
+    main(algorithm_3, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
-    # print("\nusing max purchase price algorithm, SA prices, wind location 1 \n")
-    # main(max_purchase_price, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
+    # print("\nusing algorithm_2, SA prices, wind location 1 \n")
+    # main(algorithm_2, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
 
-    # print("\nusing trivial algorithm, QLD prices, wind location 2 \n")
-    # main(trivial, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
+    # print("\nusing algorithm_1, QLD prices, wind location 2 \n")
+    # main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
 
-    # print("\nusing max purchase price algorithm, QLD prices, wind location 2 \n")
-    # main(max_purchase_price, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
+    # print("\nusing algorithm_2, QLD prices, wind location 2 \n")
+    # main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
 
-    # print("\nusing trivial algorithm, SA prices, wind location 2 \n")
-    # main(trivial, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
+    # print("\nusing algorithm_1 algorithm, SA prices, wind location 2 \n")
+    # main(algorithm_1, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
 
-    print("\nusing max purchase price algorithm, SA prices, wind location 2 \n")
-    main(max_purchase_price, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
+    # print("\nusing algorithm_2 algorithm, SA prices, wind location 2 \n")
+    # main(algorithm_2, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
