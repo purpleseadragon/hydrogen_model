@@ -11,7 +11,7 @@ import numpy as np
 
 # represents an electrolysis stack with a certain number of cells
 # returns the 
-def electrolysis_PEM(input, min_capacity, max_capacity, min_efficiency, max_efficiency):
+def electrolysis(input, min_load, max_load, min_efficiency, max_efficiency):
     """
     Parameters
     ----------
@@ -25,14 +25,14 @@ def electrolysis_PEM(input, min_capacity, max_capacity, min_efficiency, max_effi
     -------
     output : float -> output hydrogen in kg/h at the stack
     """
-    if input < min_capacity:
+    if input < min_load:
         print("input is less than minimum capacity")
         return 0
-    if input > max_capacity*1.01:
+    if input > max_load*1.01:
         print("input is greater than maximum capacity")
         return 0
     
-    efficiency = interpolate(input, min_capacity, max_capacity, min_efficiency, max_efficiency)
+    efficiency = interpolate(input, min_load, max_load, min_efficiency, max_efficiency)
     output = input/efficiency # kg/h 
     return output
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     print(f"efficiency: {min_efficiency:.2f} kWh/kg")
     print(f"max capacity: {max_capacity:.2f} kW")
 
-    h2_production_rate = electrolysis_PEM(10000, min_capacity, max_capacity, min_efficiency, max_efficiency)
+    h2_production_rate = electrolysis(10000, min_capacity, max_capacity, min_efficiency, max_efficiency)
     print(f"hydrogen production rate: {h2_production_rate:.2f} kg/h")
 
     exit(1)

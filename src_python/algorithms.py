@@ -1,6 +1,6 @@
 # ...
 from helper import generate_sell_cost
-from electrolysis import electrolysis_PEM
+from electrolysis import electrolysis
 
 def algorithm_1(outputs, sort, time, date, 
             solar_output, wind_output, battery_level, 
@@ -17,7 +17,7 @@ def algorithm_1(outputs, sort, time, date,
 
     electrolyser_input = electrolyser_capacity_total
 
-    h2_prod_rate = electrolysis_PEM(electrolyser_input, 0.1*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
+    h2_prod_rate = electrolysis(electrolyser_input, 0.1*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
 
     # if wind and solar are greater than electrolyser capacity, then excess goes to battery
     battery_input = max(min((wind_output + solar_output - electrolyser_input)*battery_eff,(battery_capacity_total - battery_level)/time_diff), 0)
@@ -116,7 +116,7 @@ def algorithm_2(outputs, sort, time, date,
         electrolyser_input = electrolyser_min_capacity*electrolyser_capacity_total
         purchase_rate = electrolyser_input - (purchase_rate + wind_output + solar_output + battery_output - battery_input_raw - sell_rate)
 
-    h2_prod_rate = electrolysis_PEM(electrolyser_input, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
+    h2_prod_rate = electrolysis(electrolyser_input, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
     
     if sell_rate > 0 and purchase_rate > 0:
         if purchase_rate > sell_rate:
@@ -203,7 +203,7 @@ def algorithm_3(outputs, sort, time, date,
         electrolyser_input = electrolyser_min_capacity*electrolyser_capacity_total
         purchase_rate = electrolyser_input - (purchase_rate + wind_output + solar_output + battery_output - battery_input_raw - sell_rate)
 
-    h2_prod_rate = electrolysis_PEM(electrolyser_input, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
+    h2_prod_rate = electrolysis(electrolyser_input, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff)
     
     if sell_rate > 0 and purchase_rate > 0:
         if purchase_rate > sell_rate:

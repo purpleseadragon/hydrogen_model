@@ -17,18 +17,20 @@ panel_area = 1.5 # m2
 rated_power = 0.3 # kW
 tilt = 38 # degrees (standard)
 
-file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\solar_data.xlsx"
+file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\input_data.xlsx"
 
-df = pd.read_excel(file_path, sheet_name='dual axis')
+df = pd.read_excel(file_path, sheet_name='input_main')
 
 #energy cut off column represents the energy produced by a single panel with ~ 1.5 m2 of area and vertical axis configuration
 def plot_average_energy_per_day(df):
-    sum_by_time_of_day = df.groupby('HH24')['Energy cut off (MWh)'].sum()
-    xs = [k for k in sum_by_time_of_day.keys()]
+    sum_by_time_of_day = df.groupby('time')['solar_output'].mean()
+    xs = [k.hour + k.minute/60 + k.second/3600 for k in sum_by_time_of_day.keys()]
     ys = [sum_by_time_of_day[k] for k in sum_by_time_of_day.keys()]
     plt.plot(xs, ys)
-    plt.xlabel('time of day')
-    plt.ylabel('scaled power generation')
+    plt.xlabel('Time of day (hrs)')
+    plt.ylabel('Average power generation (W)')
+    plt.xlim(0, 24)
+    plt.ylim(-5, None)
     plt.show()
 
 # Filter by Month and day

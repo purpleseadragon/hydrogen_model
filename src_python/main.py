@@ -66,7 +66,7 @@ battery_cost_per_kwh_2023 = 485 # $/kWh
 battery_ul = 20 # years
 print(f"total installed battery capacity is {battery_capacity_total*1e-3:,.2f} MWh")
 
- # for algorithm_2 algorithm
+# for algorithm_2 algorithm
 price_buy_maximum = 40 # $/MWh
 price_sell_minimum = 100 # $/MWh
 
@@ -125,18 +125,21 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
     total_cost_purchased = outputs['purchase_cost'].sum()
     total_cost_sold = outputs['sell_net_price'].sum()
 
-    total_cost_solar = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels*solar_price*10**(-6) # ... -> Wh * n * $/MWh * MWh/Wh -> $
-    total_cost_wind = inputs[f'wind_output_{wind_loc}'][start_time:end_time].sum()*time_step*wind_turbines*wind_price*10**(-3) # ... -> kWh * n * $/MWh * MWh/Wh -> $
+    total_solar_produced = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels
+    total_cost_solar = total_solar_produced*solar_price*10**(-6) # ... -> Wh * n * $/MWh * MWh/Wh -> $
+
+    total_wind_produced = inputs[f'wind_output_{wind_loc}'][start_time:end_time].sum()*time_step*wind_turbines
+    total_cost_wind = total_wind_produced*wind_price*10**(-3) # ... -> kWh * n * $/MWh * MWh/Wh -> $
 
     total_cost_battery = battery_capacity_total*battery_cost_per_kwh_2023 * (end_time - start_time) / (battery_ul*365*24*12)
     total_cost_electrolyser = electrolyser_capacity_total*electrolyser_cost_per_kw_2023 * (end_time - start_time) / (electrolyser_ul*365*24*12)
     
     print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr, capacity factor:  \
-          {total_h2_produced/(end_time-start_time)/time_step/electrolysis_PEM(electrolyser_capacity_total, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff):,.2f}")
+          {total_h2_produced/(end_time-start_time)/time_step/electrolysis(electrolyser_capacity_total, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff):,.2f}")
     print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
     print(f"net profit from sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
-    print(f"total price solar: ${total_cost_solar:,.2f}, solar capacity factor: {total_h2_produced/(end_time-start_time)/time_step/solar_panels/solar_panel_rated:,.2f}")
-    print(f"total price wind: ${total_cost_wind:,.2f}, wind capacity factor: {total_h2_produced/(end_time-start_time)/time_step/wind_turbines/wind_turbines_rated:,.2f}")
+    print(f"total price solar: ${total_cost_solar:,.2f}, total solar produced: {total_solar_produced:,.2f}, solar capacity factor: {(total_solar_produced/((end_time-start_time)*solar_panels*solar_panel_rated*time_step*10**6))*100:,.2f}%")
+    print(f"total price wind: ${total_cost_wind:,.2f}, wind capacity factor: {(total_wind_produced/((end_time-start_time)*wind_turbines*wind_turbines_rated*time_step*10**3))*100:,.2f}%")
     print(f"cost of batteries over the time period: ${total_cost_battery:,.2f}")
     print(f"cost of electrolysers over the time period: ${total_cost_electrolyser:,.2f}")
     print(f"total kWh purchased from grid: {outputs['purchase_rate'].sum()*time_step:,.2f} kWh")
