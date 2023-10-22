@@ -1,13 +1,5 @@
-# use solar generation data based on townsville solar irradiance data
-
-# could I just do a two layer cdf for the solar generation one for total produced (by season) 
-# and then again for distributing throughout the day
-
-# or just choose a day then subsequent 12? days for either solar or wind
-
 import pandas as pd
 import matplotlib.pyplot as plt
-
 
 
 # coefficients list
@@ -22,7 +14,7 @@ file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\input_data.xlsx"
 df = pd.read_excel(file_path, sheet_name='input_main')
 
 #energy cut off column represents the energy produced by a single panel with ~ 1.5 m2 of area and vertical axis configuration
-def plot_average_energy_per_day(df):
+def plot_average_energy_per_day_solar(df):
     sum_by_time_of_day = df.groupby('time')['solar_output'].mean()
     xs = [k.hour + k.minute/60 + k.second/3600 for k in sum_by_time_of_day.keys()]
     ys = [sum_by_time_of_day[k] for k in sum_by_time_of_day.keys()]
@@ -33,22 +25,48 @@ def plot_average_energy_per_day(df):
     plt.ylim(-5, None)
     plt.show()
 
-# Filter by Month and day
+
+def plot_average_energy_per_day(df, heading):
+    sum_by_time_of_day = df.groupby('time')[heading].mean()
+    xs = [k.hour + k.minute/60 + k.second/3600 for k in sum_by_time_of_day.keys()]
+    ys = [sum_by_time_of_day[k] for k in sum_by_time_of_day.keys()]
+    plt.plot(xs, ys)
+    plt.xlabel('Time of day (hrs)')
+    plt.ylabel('Average power generation (kW)')
+    plt.xlim(0, 24)
+    plt.ylim(-5, None)
+    plt.show()
+
+
+def plot_average_energy_per_month(df, heading):
+    if heading != 'solar_output':
+        sum_by_month = df.groupby('month')[heading].sum()*1/12*1e-3
+    else:
+        sum_by_month = df.groupby('month')[heading].sum()*1/12*1e-6
+    # xs = [k for k in sum_by_month.keys()]
+    ys = [sum_by_month[k] for k in sum_by_month.keys()]
+
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct','Nov','Dec']
+    plt.bar(months, ys)
+    plt.xlabel('Month')
+    if heading != 'solar_output':
+        plt.ylabel('Total power generation (MWh)')
+    else:
+        plt.ylabel('Total power generation (MWh)')
+    # plt.xlim(0, )
+    # plt.ylim(-5, None)
+    plt.show()
 
 
 
 if __name__ == "__main__":
-    print("testing...")
-    print(df.head())
-    # print(df.columns)
-    # print(df.loc[30,'SS'])
-    # print(df.iloc[2,1])
-    installed_capacity = 1000 # kW
-    #sum_by_time_of_day = df.groupby('HH24')['Energy Cut Off (MWh)'].sum()
 
-    # print(type(sum_by_time_of_day))
-    # print(sum_by_time_of_day.head())
-    # print(sum_by_time_of_day[0.0])
+    heading = 'wind_output_1'
+    plot_average_energy_per_month(df, heading)    
 
-    plot_average_energy_per_day(df)
+    heading = 'wind_output_2'
+    plot_average_energy_per_month(df, heading)
+
+    heading = 'solar_output'
+    plot_average_energy_per_month(df, heading)
     

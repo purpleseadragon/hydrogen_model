@@ -6,6 +6,7 @@ from algorithms import *
 
 input_file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\input_data.xlsx"
 output_file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\output_data_gen.xlsx"
+output_summary_file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\output_data_summary.xlsx"
 
 inputs = pd.read_excel(input_file_path)
 
@@ -60,8 +61,8 @@ batteries = 20 # rated capacity is 3000 * number of batteries kWh
 battery_capacity = 3000 # kWh
 battery_capacity_total = batteries*battery_capacity # kWh
 battery_eff = 0.9 # 90% efficiency
-battery_max_time = 8 # hours
-battery_max_charge_rate = 3000*batteries # kW
+battery_max_time = 4 # hours
+battery_max_charge_rate = battery_capacity_total/battery_max_time # kW
 battery_cost_per_kwh_2023 = 485 # $/kWh
 battery_ul = 20 # years
 print(f"total installed battery capacity is {battery_capacity_total*1e-3:,.2f} MWh")
@@ -72,13 +73,13 @@ price_sell_minimum = 100 # $/MWh
 
 electrolyser_min_capacity = 0.3 # fraction of max capacity -> dependent on type of electrolyser e.g. PEM, alkaline, etc.
 
-def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
+def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, name="n/a", printing=False):
     # initial setup
     battery_level = 0
     # working loop
     def working_loop(opt_alg, price_state, wind_loc, inputs=inputs, outputs=outputs, battery_level=battery_level):
         """iterates through each timestep and calls the algorithm to determine the next timestep"""
-        for i in range(start_time, end_time-start_time):
+        for i in range(start_time, end_time):
             sort = inputs.loc[i,'sort']
             time = inputs.loc[i,'time']
             date = inputs.loc[i,'date']
@@ -133,27 +134,44 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc):
 
     total_cost_battery = battery_capacity_total*battery_cost_per_kwh_2023 * (end_time - start_time) / (battery_ul*365*24*12)
     total_cost_electrolyser = electrolyser_capacity_total*electrolyser_cost_per_kw_2023 * (end_time - start_time) / (electrolyser_ul*365*24*12)
+    total_cost_electrolyser += + 0.02*total_cost_electrolyser # 2% maintenance cost
     
-    print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr, capacity factor:  \
-          {total_h2_produced/(end_time-start_time)/time_step/electrolysis(electrolyser_capacity_total, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff):,.2f}")
-    print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
-    print(f"net profit from sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
-    print(f"total price solar: ${total_cost_solar:,.2f}, total solar produced: {total_solar_produced:,.2f}, solar capacity factor: {(total_solar_produced/((end_time-start_time)*solar_panels*solar_panel_rated*time_step*10**6))*100:,.2f}%")
-    print(f"total price wind: ${total_cost_wind:,.2f}, wind capacity factor: {(total_wind_produced/((end_time-start_time)*wind_turbines*wind_turbines_rated*time_step*10**3))*100:,.2f}%")
-    print(f"cost of batteries over the time period: ${total_cost_battery:,.2f}")
-    print(f"cost of electrolysers over the time period: ${total_cost_electrolyser:,.2f}")
-    print(f"total kWh purchased from grid: {outputs['purchase_rate'].sum()*time_step:,.2f} kWh")
-    print(f"total kWh sold to grid: {outputs['sell_rate'].sum()*time_step:,.2f} kWh")
-    print(f"total kWh put into system: {(outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['purchase_rate'].sum()*time_step):,.2f} kWh")
-    print(f"total kWh taken from system: {(outputs['electrolyser_input'].sum()*time_step +outputs['sell_rate'].sum()*time_step):,.2f} kWh")
-    print(f"total kWh stored in batteries: {outputs['battery_input'].sum()*time_step:,.2f} kWh")
-    print(f"total kWh taken from batteries: {outputs['battery_output'].sum()*time_step:,.2f} kWh")
-                                                     
+    if printing:
+        print(f"total h2 produced: {total_h2_produced:,.2f} kg, average production: {total_h2_produced/(end_time-start_time)/time_step:,.2f} kg/hr, capacity factor:  \
+            {total_h2_produced/(end_time-start_time)/time_step/electrolysis(electrolyser_capacity_total, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff):,.2f}")
+        print(f"total cost of purchased electricity: ${total_cost_purchased:,.2f}")
+        print(f"total price of sold electricity: ${total_cost_sold:,.2f}") # need to get difference between produced and sold prices 
+        print(f"total price solar: ${total_cost_solar:,.2f}, total solar produced: {total_solar_produced:,.2f}, solar capacity factor: {(total_solar_produced/((end_time-start_time)*solar_panels*solar_panel_rated*time_step*10**6))*100:,.2f}%")
+        print(f"total price wind: ${total_cost_wind:,.2f}, wind capacity factor: {(total_wind_produced/((end_time-start_time)*wind_turbines*wind_turbines_rated*time_step*10**3))*100:,.2f}%")
+        print(f"cost of batteries over the time period: ${total_cost_battery:,.2f}")
+        print(f"cost of electrolysers over the time period: ${total_cost_electrolyser:,.2f}")
+        print(f"total kWh purchased from grid: {outputs['purchase_rate'].sum()*time_step:,.2f} kWh")
+        print(f"total kWh sold to grid: {outputs['sell_rate'].sum()*time_step:,.2f} kWh")
+        print(f"total kWh put into system: {(outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['purchase_rate'].sum()*time_step):,.2f} kWh")
+        print(f"total kWh taken from system: {(outputs['electrolyser_input'].sum()*time_step +outputs['sell_rate'].sum()*time_step):,.2f} kWh")
+        print(f"total kWh stored in batteries: {outputs['battery_input'].sum()*time_step:,.2f} kWh")
+        print(f"total kWh taken from batteries: {outputs['battery_output'].sum()*time_step:,.2f} kWh")
+                                                        
 
-    # price per kg of H2
-    print(f"price per kg of H2: ${(total_cost_purchased + total_cost_solar + total_cost_wind + total_cost_battery + total_cost_electrolyser-total_cost_sold)/(total_h2_produced):,.2f} excl. of electrolyser, conversion, and battery costs")
+        # price per kg of H2
+        print(f"price per kg of H2: ${(total_cost_purchased + total_cost_solar + total_cost_wind + total_cost_battery + total_cost_electrolyser-total_cost_sold)/(total_h2_produced):,.2f} excl. of electrolyser, conversion, and battery costs")
 
     outputs.to_excel(output_file_path, index=False) 
+
+    outputs_summary = {
+        "name": name,
+        "total_h2_produced": total_h2_produced, "h2_average_production (kg/s)": total_h2_produced/(end_time-start_time)/time_step, "h2_capacity_factor": total_h2_produced/(end_time-start_time)/time_step/electrolysis(electrolyser_capacity_total, electrolyser_min_capacity*electrolyser_capacity_total, electrolyser_capacity_total, min_production_eff, max_production_eff),  
+        "total_wind_produced": total_wind_produced, "wind_capacity_factor:": (total_wind_produced/((end_time-start_time)*wind_turbines*wind_turbines_rated*time_step*10**3))*100, "total_wind_cost": total_cost_wind, 
+        "total_solar_produced": total_solar_produced, "solar_capacity_factor": (total_solar_produced/((end_time-start_time)*solar_panels*solar_panel_rated*time_step*10**6))*100, "total_cost_solar": total_cost_solar,
+        "battery_cost": total_cost_battery, 
+        "electrolyser_cost": total_cost_electrolyser, 
+        "total_purchased": outputs['purchase_rate'].sum()*time_step, "total_purchased_cost": total_cost_purchased,
+        "total_sold": outputs['sell_rate'].sum()*time_step, "total_sold_cost": total_cost_sold,
+        "total_into_system": (outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['purchase_rate'].sum()*time_step), "total_from_system": (outputs['electrolyser_input'].sum()*time_step +outputs['sell_rate'].sum()*time_step),
+        "total_into_batteries": outputs['battery_input'].sum()*time_step, "total_from_batteries": outputs['battery_output'].sum()*time_step,
+        }
+    
+    return outputs_summary
 
 if __name__ == "__main__":
     # change parameters for different test results
@@ -161,14 +179,55 @@ if __name__ == "__main__":
     state_2 = 'sa'
     wind_loc_1 = '1'
     wind_loc_2 = '2'
-    start_time = 132 # Jan 1, 11 am -> only have data from here for wind
-    end_time = 3288 # 3288 is Jan 12, 10:30 am -> 12 day time period
+    start_time = 5000 # Jan 1, 11 am -> only have data from here for wind
+    end_time = 18000 # 3288 is Jan 12, 10:30 am -> 12 day time period
+
+    outputs_summary_headers = {
+        "name": [],
+        "total_h2_produced": [], "h2_average_production (kg/s)": [], "h2_capacity_factor": [],  
+        "total_wind_produced": [], "wind_capacity_factor:": [], "total_wind_cost": [], 
+        "total_solar_produced": [], "solar_capacity_factor": [], "total_cost_solar": [],
+        "battery_cost": [], 
+        "electrolyser_cost": [], 
+        "total_purchased": [], "total_purchased_cost": [],
+        "total_sold": [], "total_sold_cost": [],
+        "total_into_system": [], "total_from_system": [],
+        "total_into_batteries": [], "total_from_batteries": [],
+        }
+    
+    outputs_summary = pd.DataFrame(outputs_summary_headers)
+    # print("\nusing algorithm_1, QLD prices, wind location 1 \n")
+    # main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_1, True)
 
     # output to different files
+    states = ['qld', 'sa']
+    wind_locs = ['1', '2']
+    algorithms = [algorithm_1, algorithm_2, algorithm_3]
+    times = [[34560, 43487], [52128,61055], [96192, 105119]] # corresponding to May, July, December
+
+    for algorithm in algorithms:
+        for state in states:
+            for wind_loc in wind_locs:
+                for time in times:
+                    start_time = time[0]
+                    end_time = time[1]
+                    if time[0] == 34560:
+                        month = 'may'
+                    elif time[0] == 52128:
+                        month = 'july'
+                    else:
+                        month = 'dec'
+                    print(f"\nusing {algorithm.__name__}, {month}, {state} prices, wind location {wind_loc} \n")
+                    name = f"{algorithm.__name__}_{month}_{state}_{wind_loc}"
+                    new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, name)
+                    outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
+                    
+    outputs_summary.to_excel(output_summary_file_path, index=False) 
 
 
-    print("\nusing algorithm_1, QLD prices, wind location 1 \n")
-    main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+
+
+
 
     # print("\nusing algorithm_2, QLD prices, wind location 1 \n")
     # main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_1)

@@ -23,8 +23,8 @@ def algorithm_1(outputs, sort, time, date,
     battery_input = max(min((wind_output + solar_output - electrolyser_input)*battery_eff,(battery_capacity_total - battery_level)/time_diff), 0)
 
     # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
-    if len(outputs) > battery_max_time/time_diff:
-        battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
+    # if len(outputs) > battery_max_time/time_diff:
+    #     battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
 
     # if wind + solar < electrolyser_input, then use battery to make up the difference
     # if len(outputs) > battery_max_time/time_diff and wind_output + solar_output < electrolyser_input:
@@ -34,7 +34,7 @@ def algorithm_1(outputs, sort, time, date,
     #     battery_output = max(battery_level/time_diff - cumulative_battery,0)
 
     if wind_output + solar_output < electrolyser_input:
-        battery_output = min((electrolyser_input - wind_output - solar_output), battery_level / time_diff, battery_max_charge_rate, battery_output)
+        battery_output = min((electrolyser_input - wind_output - solar_output), battery_level / time_diff, battery_max_charge_rate)
 
     # if wind + solar > battery_input + electrolyser_input, then sell excess
     if battery_input - battery_output < wind_output + solar_output - electrolyser_input:
@@ -74,8 +74,8 @@ def algorithm_2(outputs, sort, time, date,
 
 
     # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
-    if len(outputs) > battery_max_time/time_diff:
-        battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
+    # if len(outputs) > battery_max_time/time_diff:
+    #     battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
 
     # purchase as much energy as possible if price is below price maximum
     if grid_price < price_buy_maximum and wind_output + solar_output + battery_output < electrolyser_capacity_total:
@@ -94,7 +94,7 @@ def algorithm_2(outputs, sort, time, date,
     #     # if wind + solar < electrolyser_input, then use battery to make up the difference
 
     elif grid_price >= price_buy_maximum and wind_output + solar_output + battery_output < electrolyser_capacity_total:
-        battery_output = max(min((electrolyser_capacity_total - wind_output - solar_output - battery_output), battery_level / time_diff, battery_max_charge_rate), battery_output)
+        battery_output = min((electrolyser_capacity_total - wind_output - solar_output - battery_output), battery_level / time_diff, battery_max_charge_rate)
 
     elif grid_price >= price_buy_maximum and wind_output + solar_output + battery_output >= electrolyser_capacity_total:
         battery_input = max(min((wind_output + solar_output + battery_output - electrolyser_capacity_total)*battery_eff,(battery_capacity_total - battery_level)/time_diff, battery_max_charge_rate), 0)
@@ -155,8 +155,8 @@ def algorithm_3(outputs, sort, time, date,
 
 
     # after the initial 8 hours, has to start remembering battery input over initial 8 hours and battery level cannot exceed this
-    if len(outputs) > battery_max_time/time_diff:
-        battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
+    # if len(outputs) > battery_max_time/time_diff:
+    #     battery_output = min(max(battery_level/time_diff - cumulative_battery, 0), battery_max_charge_rate)
 
     # purchase as much energy as possible if price is below price maximum
     if grid_price < price_buy_maximum and wind_output + solar_output + battery_output < electrolyser_capacity_total:
@@ -181,7 +181,7 @@ def algorithm_3(outputs, sort, time, date,
     #     # if wind + solar < electrolyser_input, then use battery to make up the difference
 
     elif grid_price >= price_buy_maximum and grid_price <= price_sell_minimum and wind_output + solar_output + battery_output < electrolyser_capacity_total:
-        battery_output = max(min((electrolyser_capacity_total - wind_output - solar_output - battery_output), battery_level / time_diff, battery_max_charge_rate), battery_output)
+        battery_output = min((electrolyser_capacity_total - wind_output - solar_output - battery_output), battery_level / time_diff, battery_max_charge_rate)
 
     elif grid_price >= price_buy_maximum and grid_price <= price_sell_minimum and wind_output + solar_output + battery_output >= electrolyser_capacity_total:
         battery_input = max(min((wind_output + solar_output + battery_output - electrolyser_capacity_total)*battery_eff,(battery_capacity_total - battery_level)/time_diff, battery_max_charge_rate), 0)
