@@ -76,12 +76,15 @@ print(f"total installed battery capacity is {battery_capacity_total*1e-3:,.2f} M
 price_buy_maximum = min(solar_price, wind_price) - 40 # $/MWh
 price_sell_minimum = max(solar_price, wind_price) + 40 # $/MWh
 
+#
+renewables_ratio = 1
+
 print(price_buy_maximum,  price_sell_minimum)
 
 water_cost = 3.301e-3 # $/L
 water_to_hydrogen_ratio = 12 # L/kg
 
-def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, ratio, average_price, name="n/a",  printing=False):
+def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, ratio, average_price, price_buy_maximum, price_sell_minimum, renewables_ratio, name="n/a",  printing=False):
     # average price is for Queensland in May
 
     # initial setup
@@ -94,8 +97,8 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, ratio,
             time = inputs.loc[i,'time']
             date = inputs.loc[i,'date']
 
-            solar_output = inputs.loc[i,'solar_output']*solar_panels*10**(-3) # W -> kW
-            wind_output = inputs.loc[i,f'wind_output_{wind_loc}']*wind_turbines # kW
+            solar_output = inputs.loc[i,'solar_output']*solar_panels*10**(-3)*renewables_ratio # W -> kW
+            wind_output = inputs.loc[i,f'wind_output_{wind_loc}']*wind_turbines*renewables_ratio # kW
             grid_price = average_price + (inputs.loc[i,f'grid_price_{price_state}']-average_price)*ratio # $/MWh
             
             # generates cumulative battery 
@@ -136,10 +139,10 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, ratio,
     total_cost_purchased = outputs['purchase_cost'].sum()
     total_cost_sold = outputs['sell_net_price'].sum()
 
-    total_solar_produced = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels
+    total_solar_produced = inputs['solar_output'][start_time:end_time].sum()*time_step*solar_panels*renewables_ratio
     total_cost_solar = total_solar_produced*solar_price*10**(-6) # ... -> Wh * n * $/MWh * MWh/Wh -> $
 
-    total_wind_produced = inputs[f'wind_output_{wind_loc}'][start_time:end_time].sum()*time_step*wind_turbines
+    total_wind_produced = inputs[f'wind_output_{wind_loc}'][start_time:end_time].sum()*time_step*wind_turbines*renewables_ratio
     total_cost_wind = total_wind_produced*wind_price*10**(-3) # ... -> kWh * n * $/MWh * MWh/Wh -> $
 
     total_cost_battery = battery_capacity_total*battery_cost_per_kwh_2023 * (end_time - start_time) / (battery_ul*365*24*12)
@@ -213,14 +216,134 @@ if __name__ == "__main__":
     
     outputs_summary = pd.DataFrame(outputs_summary_headers)
 
-    ratios = [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3]
+    # code for grid fluctuations sensitivity analysis -> uncomment for analysis
 
-    for ratio in ratios:
-        print(f"\nusing {ratio}\n")
-        name = f"QLD_coopers_gap_2023_ratio:{ratio}"
-        new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, ratio, average_price, name)
+    # ratios = [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3]
+
+    # for ratio in ratios:
+    #     print(f"\nusing {ratio}\n")
+    #     name = f"QLD_coopers_gap_2023_ratio:{ratio}"
+    #     new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, ratio, average_price, price_buy_maximum, price_sell_minimum, renewables_ratio,  name)
+    #     outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
+
+    # # plt.plot(outputs_summary['ratio'], outputs_summary['h2_price'])
+    # # plt.plot(outputs_summary['ratio'], outputs_summary['h2_capacity_factor'])
+    # # plt.show()
+
+    # fig, ax1 = plt.subplots()
+
+    # color = 'tab:blue'
+    # ax1.set_xlabel('Prices scale from average')
+    # ax1.set_ylabel('LCOH ($/kg)')
+    # ax1.plot(outputs_summary['ratio'], outputs_summary['h2_price'], color)
+    # ax1.tick_params(axis='y', labelcolor=color)
+
+    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    # color = 'tab:gray'
+    # ax2.set_ylabel('Electrolysis Capacity Factor')  # we already handled the x-label with ax1
+    # ax2.plot(outputs_summary['ratio'], outputs_summary['h2_capacity_factor'], color)
+    # ax2.tick_params(axis='y', labelcolor=color)
+
+
+    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # plt.show()
+    
+    # outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', 'grid_pricing_sensitive.xlsx'), index=False)
+
+   
+    # # code for purchase limit sensitivity analysis -> uncomment for analysis
+
+    # Cs = [25,30,35,40,45,50,55]
+    
+    # for C in Cs:
+    #     print(f"\nusing {C}\n")
+    #     name = f"QLD_coopers_gap_2023_ratio:{C}"
+    #     price_buy_maximum = min(solar_price, wind_price) - C
+    #     new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, 1, average_price, price_buy_maximum, price_sell_minimum, renewables_ratio,  name)
+    #     outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
+
+    # fig, ax1 = plt.subplots()
+
+    # color = 'tab:blue'
+    # ax1.set_xlabel('Purchase limit constant (C)')
+    # ax1.set_ylabel('LCOH ($/kg)')
+    # ax1.plot(Cs, outputs_summary['h2_price'], color)
+    # ax1.tick_params(axis='y', labelcolor=color)
+
+    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    # color = 'tab:gray'
+    # ax2.set_ylabel('Electrolysis Capacity Factor')  # we already handled the x-label with ax1
+    # ax2.plot(Cs, outputs_summary['h2_capacity_factor'], color)
+    # ax2.tick_params(axis='y', labelcolor=color)
+
+
+    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # plt.show()
+    
+    # outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', 'purchase_limit_sensitive.xlsx'), index=False)
+
+    # # code for sale limit sensitivity analysis -> uncomment for analysis
+
+    # Cs = [25,30,35,40,45,50,55]
+    
+    # for C in Cs:
+    #     print(f"\nusing {C}\n")
+    #     name = f"QLD_coopers_gap_2023_ratio:{C}"
+    #     price_sell_minimum = max(solar_price, wind_price) + C
+    #     new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, 1, average_price, price_buy_maximum, price_sell_minimum, renewables_ratio,  name)
+    #     outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
+
+    # fig, ax1 = plt.subplots()
+
+    # color = 'tab:blue'
+    # ax1.set_xlabel('Sale limit constant (C)')
+    # ax1.set_ylabel('LCOH ($/kg)')
+    # ax1.plot(Cs, outputs_summary['h2_price'], color)
+    # ax1.tick_params(axis='y', labelcolor=color)
+
+    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    # color = 'tab:gray'
+    # ax2.set_ylabel('Electrolysis Capacity Factor')  # we already handled the x-label with ax1
+    # ax2.plot(Cs, outputs_summary['h2_capacity_factor'], color)
+    # ax2.tick_params(axis='y', labelcolor=color)
+
+
+    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # plt.show()
+    
+    # outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', 'purchase_limit_sensitive.xlsx'), index=False)
+
+
+    # code for renewables to electrolyser ratio -> uncomment for analysis
+
+    renewables_ratios = [0.8,0.85,0.9,0.95,1,1.05,1.1,1.15,1.2]
+
+    for renewables_ratio in renewables_ratios:
+        print(f"\nusing {renewables_ratio}\n")
+        name = f"QLD_coopers_gap_2023_ratio:{renewables_ratio}"
+        new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, 1, average_price, price_buy_maximum, price_sell_minimum, renewables_ratio,  name)
         outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
 
-    plt.plot(outputs_summary['ratio'], outputs_summary['h2_capacity_factor'])
+    fig, ax1 = plt.subplots()
+
+    color = 'tab:blue'
+    ax1.set_xlabel('Renewables to Electroysis Ratio')
+    ax1.set_ylabel('LCOH ($/kg)')
+    ax1.plot(renewables_ratios, outputs_summary['h2_price'], color)
+    ax1.tick_params(axis='y', labelcolor=color)
+
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    color = 'tab:gray'
+    ax2.set_ylabel('Electrolysis Capacity Factor')  # we already handled the x-label with ax1
+    ax2.plot(renewables_ratios, outputs_summary['h2_capacity_factor'], color)
+    ax2.tick_params(axis='y', labelcolor=color)
+
+
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.show()
+    
     outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', 'grid_pricing_sensitive.xlsx'), index=False)

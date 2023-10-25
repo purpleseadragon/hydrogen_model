@@ -187,8 +187,8 @@ if __name__ == "__main__":
     state_2 = 'sa'
     wind_loc_1 = '1'
     wind_loc_2 = '2'
-    start_time = 5000 # Jan 1, 11 am -> only have data from here for wind
-    end_time = 18000 # 3288 is Jan 12, 10:30 am -> 12 day time period
+    start_time = 34560 # may start
+    end_time = 43487 # may end
 
     outputs_summary_headers = {
         "name": [],
@@ -209,40 +209,40 @@ if __name__ == "__main__":
     # main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_1, True)
 
     # output to different files
-    states = ['qld', 'sa']
-    wind_locs = ['1', '2']
-    algorithms = [algorithm_1, algorithm_2, algorithm_3]
-    times = [[34560, 43487], [52128,61055], [96192, 105119]] # corresponding to May, July, December
+    # states = ['qld', 'sa']
+    # wind_locs = ['1', '2']
+    # algorithms = [algorithm_1, algorithm_2, algorithm_3]
+    # times = [[34560, 43487], [52128,61055], [96192, 105119]] # corresponding to May, July, December
 
-    for algorithm in algorithms:
-        for state in states:
-            for wind_loc in wind_locs:
-                for time in times:
-                    start_time = time[0]
-                    end_time = time[1]
-                    if time[0] == 34560:
-                        month = 'may'
-                    elif time[0] == 52128:
-                        month = 'july'
-                    else:
-                        month = 'dec'
-                    print(f"\nusing {algorithm.__name__}, {month}, {state} prices, wind location {wind_loc} \n")
-                    name = f"{algorithm.__name__}_{month}_{state}_{wind_locations[wind_loc]}"
-                    new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, name)
-                    outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
-                    
-    if use_index == 0:
-        outputs_summary.to_excel(output_summary_file_path, index=False) 
-    else:
-        outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', '_2030.xlsx'), index=False)
+    # for algorithm in algorithms:
+    #     for state in states:
+    #         for wind_loc in wind_locs:
+    #             for time in times:
+    #                 start_time = time[0]
+    #                 end_time = time[1]
+    #                 if time[0] == 34560:
+    #                     month = 'may'
+    #                 elif time[0] == 52128:
+    #                     month = 'july'
+    #                 else:
+    #                     month = 'dec'
+    #                 print(f"\nusing {algorithm.__name__}, {month}, {state} prices, wind location {wind_loc} \n")
+    #                 name = f"{algorithm.__name__}_{month}_{state}_{wind_locations[wind_loc]}"
+    #                 new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, name)
+    #                 outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
 
-
+    # if use_index == 0:
+    #     outputs_summary.to_excel(output_summary_file_path, index=False) 
+    # else:
+    #     outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', '_2030.xlsx'), index=False)
 
 
 
 
-    # print("\nusing algorithm_2, QLD prices, wind location 1 \n")
-    # main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
+
+
+    print("\nusing algorithm_1, QLD prices, wind location 1 \n")
+    main(algorithm_3, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
 
     # print("\nusing algorithm_3 QLD prices, wind location 1 \n")
     # main(algorithm_3, inputs, outputs, start_time, end_time, state_1, wind_loc_1)

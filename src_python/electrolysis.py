@@ -1,16 +1,6 @@
 import numpy as np
 
 
-# https://nelhydrogen.com/wp-content/uploads/2020/03/Electrolysers-Brochure-Rev-D.pdf 
-# large scale PEM and ALK electrolysis systems
-
-# about 17 kWh per day demand for families with children in AUS
-
-# X amount of stacks which each can act in a range min% -> 100% of capacity
-# with varying efficiency e_min -> e_max depending on capacity
-
-# represents an electrolysis stack with a certain number of cells
-# returns the 
 def electrolysis(input, min_load, max_load, min_efficiency, max_efficiency):
     """
     Parameters
