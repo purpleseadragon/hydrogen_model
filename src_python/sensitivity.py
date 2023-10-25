@@ -3,6 +3,7 @@ import pandas as pd
 
 from algorithms import *
 
+import matplotlib.pyplot as plt
 
 input_file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\input_data.xlsx"
 output_file_path = r"C:\Users\o_dav\Dropbox\2023_thesis\output_data_gen.xlsx"
@@ -22,7 +23,7 @@ headers = {
 
 outputs = pd.DataFrame(headers)
 
-use_index = 1 # set to 0 for 2023 and set to 1 for 2030 scenario
+use_index = 0 # set to 0 for 2023 and set to 1 for 2030 scenario
 
 wind_locations = {'1': "Mt Emerald", '2': "Coopers Gap"}
 # constants -> consider changing to taking from JSON or similar method
@@ -80,7 +81,9 @@ print(price_buy_maximum,  price_sell_minimum)
 water_cost = 3.301e-3 # $/L
 water_to_hydrogen_ratio = 12 # L/kg
 
-def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, name="n/a", printing=False):
+def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, ratio, average_price, name="n/a",  printing=False):
+    # average price is for Queensland in May
+
     # initial setup
     battery_level = 0
     # working loop
@@ -93,7 +96,7 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, name="
 
             solar_output = inputs.loc[i,'solar_output']*solar_panels*10**(-3) # W -> kW
             wind_output = inputs.loc[i,f'wind_output_{wind_loc}']*wind_turbines # kW
-            grid_price = inputs.loc[i,f'grid_price_{price_state}'] # $/MWh
+            grid_price = average_price + (inputs.loc[i,f'grid_price_{price_state}']-average_price)*ratio # $/MWh
             
             # generates cumulative battery 
             if len(outputs) > battery_max_time/time_step:
@@ -177,18 +180,21 @@ def main(opt_alg, inputs, outputs, start_time, end_time, state, wind_loc, name="
         "total_sold": outputs['sell_rate'].sum()*time_step, "total_sold_cost": total_cost_sold,
         "total_into_system": (outputs['solar_gen'].sum()*time_step + outputs['wind_gen'].sum()*time_step+outputs['purchase_rate'].sum()*time_step), "total_from_system": (outputs['electrolyser_input'].sum()*time_step +outputs['sell_rate'].sum()*time_step),
         "total_into_batteries": outputs['battery_input'].sum()*time_step, "total_from_batteries": outputs['battery_output'].sum()*time_step,
+        "ratio": ratio
         }
     
     return outputs_summary
 
 if __name__ == "__main__":
     # change parameters for different test results
-    state_1 = 'qld'
-    state_2 = 'sa'
-    wind_loc_1 = '1'
-    wind_loc_2 = '2'
-    start_time = 5000 # Jan 1, 11 am -> only have data from here for wind
-    end_time = 18000 # 3288 is Jan 12, 10:30 am -> 12 day time period
+    state = 'qld'
+    #state_2 = 'sa'
+    #wind_loc_1 = '1'
+    wind_loc = '2'
+    start_time = 34560 # may start
+    end_time = 43487 # may end
+    algorithm = algorithm_3
+    average_price = 135.35 # for may 
 
     outputs_summary_headers = {
         "name": [],
@@ -201,63 +207,20 @@ if __name__ == "__main__":
         "total_purchased": [], "total_purchased_cost": [],
         "total_sold": [], "total_sold_cost": [],
         "total_into_system": [], "total_from_system": [],
-        "total_into_batteries": [], "total_from_batteries": [],
+        "total_into_batteries": [], "total_from_batteries": [], 
+        "ratio": []
         }
     
     outputs_summary = pd.DataFrame(outputs_summary_headers)
-    # print("\nusing algorithm_1, QLD prices, wind location 1 \n")
-    # main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_1, True)
 
-    # output to different files
-    states = ['qld', 'sa']
-    wind_locs = ['1', '2']
-    algorithms = [algorithm_1, algorithm_2, algorithm_3]
-    times = [[34560, 43487], [52128,61055], [96192, 105119]] # corresponding to May, July, December
+    ratios = [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3]
 
-    for algorithm in algorithms:
-        for state in states:
-            for wind_loc in wind_locs:
-                for time in times:
-                    start_time = time[0]
-                    end_time = time[1]
-                    if time[0] == 34560:
-                        month = 'may'
-                    elif time[0] == 52128:
-                        month = 'july'
-                    else:
-                        month = 'dec'
-                    print(f"\nusing {algorithm.__name__}, {month}, {state} prices, wind location {wind_loc} \n")
-                    name = f"{algorithm.__name__}_{month}_{state}_{wind_locations[wind_loc]}"
-                    new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, name)
-                    outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
-                    
-    if use_index == 0:
-        outputs_summary.to_excel(output_summary_file_path, index=False) 
-    else:
-        outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', '_2030.xlsx'), index=False)
+    for ratio in ratios:
+        print(f"\nusing {ratio}\n")
+        name = f"QLD_coopers_gap_2023_ratio:{ratio}"
+        new_row = main(algorithm, inputs, outputs, start_time, end_time, state, wind_loc, ratio, average_price, name)
+        outputs_summary = pd.concat([outputs_summary, pd.DataFrame(new_row, index=[0])], ignore_index=True)
 
-
-
-
-
-
-    # print("\nusing algorithm_2, QLD prices, wind location 1 \n")
-    # main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
-
-    # print("\nusing algorithm_3 QLD prices, wind location 1 \n")
-    # main(algorithm_3, inputs, outputs, start_time, end_time, state_1, wind_loc_1)
-
-    # print("\nusing algorithm_2, SA prices, wind location 1 \n")
-    # main(algorithm_2, inputs, outputs, start_time, end_time, state_2, wind_loc_1)
-
-    # print("\nusing algorithm_1, QLD prices, wind location 2 \n")
-    # main(algorithm_1, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
-
-    # print("\nusing algorithm_2, QLD prices, wind location 2 \n")
-    # main(algorithm_2, inputs, outputs, start_time, end_time, state_1, wind_loc_2)
-
-    # print("\nusing algorithm_1 algorithm, SA prices, wind location 2 \n")
-    # main(algorithm_1, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
-
-    # print("\nusing algorithm_2 algorithm, SA prices, wind location 2 \n")
-    # main(algorithm_2, inputs, outputs, start_time, end_time, state_2, wind_loc_2)
+    plt.plot(outputs_summary['ratio'], outputs_summary['h2_capacity_factor'])
+    plt.show()
+    outputs_summary.to_excel(output_summary_file_path.replace('.xlsx', 'grid_pricing_sensitive.xlsx'), index=False)
